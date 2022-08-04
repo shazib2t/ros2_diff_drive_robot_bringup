@@ -11,7 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import os
+import yaml
+from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, PythonExpression
@@ -34,9 +36,16 @@ def generate_launch_description():
         [FindPackageShare('ros2_diff_drive_robot_description'), 'launch', 'description.launch.py']
     )
 
-    ekf_config_path = PathJoinSubstitution(
-        [FindPackageShare("ros2_diff_drive_robot_bringup"), "config", "ekf.yaml"]
-    )
+    #ekf_config_path = PathJoinSubstitution(
+    #    [FindPackageShare('ros2_diff_drive_robot_bringup'), 'config', 'ekf.yaml']
+    #)
+    ekf_config_path = os.path.join(get_package_share_directory('ros2_diff_drive_robot_bringup'), 'config/ekf.yaml')
+    
+    
+    # Load the parameters specific to your ComposableNode
+    with open(ekf_config_path, 'r') as file:
+        configParams = yaml.safe_load(file)['ekf_filter_node']['ros__parameters']
+    
 
     return LaunchDescription([
         DeclareLaunchArgument(
@@ -64,17 +73,16 @@ def generate_launch_description():
             executable='ekf_node',
             name='ekf_filter_node',
             output='screen',
-            parameters=[
-                ekf_config_path
-            ]
+            parameters=[configParams]
             #remappings=[("odometry/filtered", "odom")]
+            
         ),
         
-        Node(package = "tf2_ros", 
-             executable = "static_transform_publisher",
-             output='screen',
-             arguments = ["0", "0", "0", "0", "0", "0", "map", "base_footprint"]
-        ),
+        #Node(package = "tf2_ros", 
+        #     executable = "static_transform_publisher",
+        #     output='screen',
+        #     arguments = ["0", "0", "0", "0", "0", "0", "map", "base_footprint"]
+        #),
 
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(description_launch_path)
@@ -88,4 +96,5 @@ def generate_launch_description():
             PythonLaunchDescriptionSource(joy_launch_path),
             condition=IfCondition(LaunchConfiguration("joy")),
         )
+        
     ])
